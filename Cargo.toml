@@ -1,0 +1,6 @@
+[package]
+name = "actix-todo"
+version = "0.1.0"
+authors = ["Dan Munckton <dan@cultivatehq.com>"]
+
+[dependencies]
