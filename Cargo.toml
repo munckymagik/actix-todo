@@ -1,6 +1,7 @@
 [package]
+authors = ["Dan Munckton <dan@cultivatehq.com>"]
 name = "actix-todo"
 version = "0.1.0"
-authors = ["Dan Munckton <dan@cultivatehq.com>"]
 
 [dependencies]
+actix-web = "0.6.14"
