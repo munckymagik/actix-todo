@@ -3,7 +3,7 @@ extern crate env_logger;
 #[macro_use] extern crate log;
 #[macro_use] extern crate tera;
 
-use actix_web::{server, App, HttpRequest, HttpResponse};
+use actix_web::{fs, server, App, HttpRequest, HttpResponse};
 use actix_web::middleware::Logger;
 use tera::{Context, Tera};
 
@@ -33,6 +33,7 @@ fn main() {
         App::with_state(AppState { template: tera })
             .middleware(Logger::default())
             .resource("/", |r| r.f(index))
+            .handler("/static", fs::StaticFiles::new("static/"))
     };
 
     debug!("Starting server");
