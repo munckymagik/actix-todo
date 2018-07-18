@@ -14,7 +14,32 @@
 </head>
 <body>
   <div class="container">
-    Hello from the template
+    <div class="row">
+      <div class="twelve columns">
+        <ul>
+          {% for task in tasks %}
+            <li>
+              {% if task.completed %}
+                <span class="completed">{{task.description}}</span>
+                <form action="/todo/{{task.id}}" class="inline" method="post">
+                  <input type="hidden" name="_method" value="put" />
+                  <button type="submit" class="small">undo</button>
+                </form>
+                <form action="/todo/{{task.id}}" method="post" class="inline">
+                  <input type="hidden" name="_method" value="delete" />
+                  <button type="submit" class="primary small">delete</button>
+                </form>
+              {% else %}
+                <form action="/todo/{{task.id}}" class="link" method="post">
+                  <input type="hidden" name="_method" value="put" />
+                  <button type="submit" class="link">{{ task.description }}</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
   </div>
 </body>
 </html>
