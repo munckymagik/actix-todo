@@ -15,8 +15,8 @@ extern crate tera;
 use actix::prelude::{Addr, Syn, SyncArbiter};
 use actix_web::middleware::Logger;
 use actix_web::{
-    dev::ResourceHandler, fs, Form, http, server, App, AsyncResponder, FutureResponse, HttpRequest,
-    HttpResponse, State, Path
+    dev::ResourceHandler, fs, http, server, App, AsyncResponder, Form, FutureResponse, HttpRequest,
+    HttpResponse, Path, State,
 };
 use futures::Future;
 use tera::{Context, Tera};
@@ -66,15 +66,13 @@ fn create((state, params): (State<AppState>, Form<CreateParams>)) -> FutureRespo
     state
         .db
         .send(db::CreateTask {
-            description: params.description.clone()
+            description: params.description.clone(),
         })
         .from_err()
         .and_then(|res| match res {
-            Ok(_) => {
-                Ok(HttpResponse::Found()
-                    .header(http::header::LOCATION, "/")
-                    .finish())
-            },
+            Ok(_) => Ok(HttpResponse::Found()
+                .header(http::header::LOCATION, "/")
+                .finish()),
             Err(_) => Ok(HttpResponse::InternalServerError().into()),
         })
         .responder()
@@ -83,16 +81,12 @@ fn create((state, params): (State<AppState>, Form<CreateParams>)) -> FutureRespo
 fn toggle((state, params): (State<AppState>, Path<ToggleParams>)) -> FutureResponse<HttpResponse> {
     state
         .db
-        .send(db::ToggleTask {
-            id: params.id
-        })
+        .send(db::ToggleTask { id: params.id })
         .from_err()
         .and_then(|res| match res {
-            Ok(_) => {
-                Ok(HttpResponse::Found()
-                    .header(http::header::LOCATION, "/")
-                    .finish())
-            },
+            Ok(_) => Ok(HttpResponse::Found()
+                .header(http::header::LOCATION, "/")
+                .finish()),
             Err(_) => Ok(HttpResponse::InternalServerError().into()),
         })
         .responder()
