@@ -46,6 +46,10 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
         .responder()
 }
 
+fn not_found(_: HttpRequest<AppState>) -> HttpResponse {
+    HttpResponse::NotFound().body("Not found")
+}
+
 fn main() {
     std::env::set_var("RUST_LOG", "actix_todo=debug,actix_web=info");
     env_logger::init();
@@ -65,6 +69,7 @@ fn main() {
             .middleware(Logger::default())
             .resource("/", |r| r.method(http::Method::GET).with(index))
             .handler("/static", fs::StaticFiles::new("static/"))
+            .default_resource(|r| r.f(not_found))
     };
 
     debug!("Starting server");
