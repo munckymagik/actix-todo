@@ -10,7 +10,8 @@ extern crate futures;
 
 use actix::prelude::{Addr, Syn, SyncArbiter};
 use actix_web::{
-    fs, http, server, App, AsyncResponder, FutureResponse, HttpRequest, HttpResponse, State
+    fs, http, server, App, AsyncResponder, FutureResponse, HttpRequest, HttpResponse, State,
+    dev::ResourceHandler
 };
 use actix_web::middleware::Logger;
 use futures::Future;
@@ -67,9 +68,9 @@ fn main() {
         debug!("Constructing the App");
         App::with_state(AppState { template: tera, db: addr.clone() })
             .middleware(Logger::default())
-            .resource("/", |r| r.method(http::Method::GET).with(index))
+            .resource("/", |r: &mut ResourceHandler<_>| r.method(http::Method::GET).with(index))
             .handler("/static", fs::StaticFiles::new("static/"))
-            .default_resource(|r| r.f(not_found))
+            .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
     };
 
     debug!("Starting server");
