@@ -16,7 +16,7 @@ use actix::prelude::{Addr, Syn, SyncArbiter};
 use actix_web::middleware::Logger;
 use actix_web::{
     dev::ResourceHandler, fs, Form, http, server, App, AsyncResponder, FutureResponse, HttpRequest,
-    HttpResponse, State,
+    HttpResponse, State, Path
 };
 use futures::Future;
 use tera::{Context, Tera};
@@ -31,8 +31,13 @@ struct AppState {
 }
 
 #[derive(Deserialize)]
-struct FormData {
+struct CreateParams {
     description: String,
+}
+
+#[derive(Deserialize)]
+struct ToggleParams {
+    id: i32,
 }
 
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
@@ -57,11 +62,29 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
         .responder()
 }
 
-fn create((state, params): (State<AppState>, Form<FormData>)) -> FutureResponse<HttpResponse> {
+fn create((state, params): (State<AppState>, Form<CreateParams>)) -> FutureResponse<HttpResponse> {
     state
         .db
         .send(db::CreateTask {
             description: params.description.clone()
+        })
+        .from_err()
+        .and_then(|res| match res {
+            Ok(_) => {
+                Ok(HttpResponse::Found()
+                    .header(http::header::LOCATION, "/")
+                    .finish())
+            },
+            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        })
+        .responder()
+}
+
+fn toggle((state, params): (State<AppState>, Path<ToggleParams>)) -> FutureResponse<HttpResponse> {
+    state
+        .db
+        .send(db::ToggleTask {
+            id: params.id
         })
         .from_err()
         .and_then(|res| match res {
@@ -102,6 +125,9 @@ fn main() {
                 r.method(http::Method::GET).with(index)
             })
             .route("/todo", http::Method::POST, create)
+            .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
+                r.method(http::Method::POST).with(toggle)
+            })
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
     };

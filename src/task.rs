@@ -24,18 +24,14 @@ impl Task {
             .execute(conn)
     }
 
-    pub fn toggle_with_id(id: i32, conn: &PgConnection) -> bool {
-        let task = all_tasks.find(id).get_result::<Task>(conn);
-        if task.is_err() {
-            return false;
-        }
+    pub fn toggle_with_id(id: i32, conn: &PgConnection) -> QueryResult<usize> {
+        let task = all_tasks.find(id).get_result::<Task>(conn)?;
 
-        let new_status = !task.unwrap().completed;
+        let new_status = !task.completed;
         let updated_task = diesel::update(all_tasks.find(id));
         updated_task
             .set(task_completed.eq(new_status))
             .execute(conn)
-            .is_ok()
     }
 
     pub fn delete_with_id(id: i32, conn: &PgConnection) -> bool {

@@ -48,6 +48,14 @@ impl Message for AllTasks {
     type Result = Result<Vec<Task>, Error>;
 }
 
+pub struct ToggleTask {
+    pub id: i32,
+}
+
+impl Message for ToggleTask {
+    type Result = Result<(), Error>;
+}
+
 impl Actor for Conn {
     type Context = SyncContext<Self>;
 }
@@ -68,6 +76,16 @@ impl Handler<CreateTask> for Conn {
             description: todo.description,
         };
         Task::insert(new_task, self)
+            .map(|_| ())
+            .map_err(|_| error::ErrorInternalServerError("Error inserting task"))
+    }
+}
+
+impl Handler<ToggleTask> for Conn {
+    type Result = Result<(), Error>;
+
+    fn handle(&mut self, task: ToggleTask, _: &mut Self::Context) -> Self::Result {
+        Task::toggle_with_id(task.id, self)
             .map(|_| ())
             .map_err(|_| error::ErrorInternalServerError("Error inserting task"))
     }
