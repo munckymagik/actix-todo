@@ -115,12 +115,10 @@ fn main() {
             template: tera,
             db: addr.clone(),
         }).middleware(Logger::default())
-            .resource("/", |r: &mut ResourceHandler<_>| {
-                r.method(http::Method::GET).with(index)
-            })
+            .route("/", http::Method::GET, index)
             .route("/todo", http::Method::POST, create)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
-                r.method(http::Method::POST).with(toggle)
+                r.post().with(toggle)
             })
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
