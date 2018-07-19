@@ -15,7 +15,7 @@ extern crate tera;
 use actix::prelude::{Addr, Syn, SyncArbiter};
 use actix_web::middleware::Logger;
 use actix_web::{
-    dev::ResourceHandler, fs, http, server, App, AsyncResponder, FutureResponse, HttpRequest,
+    dev::ResourceHandler, fs, Form, http, server, App, AsyncResponder, FutureResponse, HttpRequest,
     HttpResponse, State,
 };
 use futures::Future;
@@ -28,6 +28,11 @@ mod task;
 struct AppState {
     template: Tera,
     db: Addr<Syn, db::Conn>,
+}
+
+#[derive(Deserialize)]
+struct FormData {
+    description: String,
 }
 
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
@@ -47,6 +52,24 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
 
                 Ok(HttpResponse::Ok().body(rendered))
             }
+            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        })
+        .responder()
+}
+
+fn create((state, params): (State<AppState>, Form<FormData>)) -> FutureResponse<HttpResponse> {
+    state
+        .db
+        .send(db::CreateTask {
+            description: params.description.clone()
+        })
+        .from_err()
+        .and_then(|res| match res {
+            Ok(_) => {
+                Ok(HttpResponse::Found()
+                    .header(http::header::LOCATION, "/")
+                    .finish())
+            },
             Err(_) => Ok(HttpResponse::InternalServerError().into()),
         })
         .responder()
@@ -78,6 +101,7 @@ fn main() {
             .resource("/", |r: &mut ResourceHandler<_>| {
                 r.method(http::Method::GET).with(index)
             })
+            .route("/todo", http::Method::POST, create)
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
     };
