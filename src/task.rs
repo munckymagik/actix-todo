@@ -1,13 +1,9 @@
 use diesel;
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use diesel::prelude::*;
 
-use ::schema::{
-    tasks,
-    tasks::dsl::{
-        tasks as all_tasks,
-        completed as task_completed,
-    }
+use schema::{
+    tasks, tasks::dsl::{completed as task_completed, tasks as all_tasks},
 };
 
 #[derive(Debug, Queryable, Serialize)]
@@ -23,7 +19,9 @@ impl Task {
     }
 
     pub fn insert(todo: NewTask, conn: &PgConnection) -> QueryResult<usize> {
-        diesel::insert_into(tasks::table).values(&todo).execute(conn)
+        diesel::insert_into(tasks::table)
+            .values(&todo)
+            .execute(conn)
     }
 
     pub fn toggle_with_id(id: i32, conn: &PgConnection) -> bool {
@@ -34,7 +32,10 @@ impl Task {
 
         let new_status = !task.unwrap().completed;
         let updated_task = diesel::update(all_tasks.find(id));
-        updated_task.set(task_completed.eq(new_status)).execute(conn).is_ok()
+        updated_task
+            .set(task_completed.eq(new_status))
+            .execute(conn)
+            .is_ok()
     }
 
     pub fn delete_with_id(id: i32, conn: &PgConnection) -> bool {
@@ -43,7 +44,7 @@ impl Task {
 }
 
 #[derive(Debug, Insertable)]
-#[table_name="tasks"]
+#[table_name = "tasks"]
 pub struct NewTask {
-    pub description: String
+    pub description: String,
 }

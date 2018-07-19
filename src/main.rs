@@ -3,17 +3,21 @@ extern crate actix_web;
 extern crate dotenv;
 extern crate env_logger;
 extern crate futures;
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate log;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate tera;
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate tera;
 
 use actix::prelude::{Addr, Syn, SyncArbiter};
-use actix_web::{
-    fs, http, server, App, AsyncResponder, FutureResponse, HttpRequest, HttpResponse, State,
-    dev::ResourceHandler
-};
 use actix_web::middleware::Logger;
+use actix_web::{
+    dev::ResourceHandler, fs, http, server, App, AsyncResponder, FutureResponse, HttpRequest,
+    HttpResponse, State,
+};
 use futures::Future;
 use tera::{Context, Tera};
 
@@ -27,7 +31,8 @@ struct AppState {
 }
 
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
-    state.db
+    state
+        .db
         .send(db::AllTasks)
         .from_err()
         .and_then(move |res| match res {
@@ -66,19 +71,20 @@ fn main() {
         let tera: Tera = compile_templates!("templates/**/*");
 
         debug!("Constructing the App");
-        App::with_state(AppState { template: tera, db: addr.clone() })
-            .middleware(Logger::default())
-            .resource("/", |r: &mut ResourceHandler<_>| r.method(http::Method::GET).with(index))
+        App::with_state(AppState {
+            template: tera,
+            db: addr.clone(),
+        }).middleware(Logger::default())
+            .resource("/", |r: &mut ResourceHandler<_>| {
+                r.method(http::Method::GET).with(index)
+            })
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
     };
 
     debug!("Starting server");
 
-    server::new(app)
-        .bind("localhost:8088")
-        .unwrap()
-        .start();
+    server::new(app).bind("localhost:8088").unwrap().start();
 
     // Run actix system, this method actually starts all async processes
     let _ = system.run();
