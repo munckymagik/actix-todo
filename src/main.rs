@@ -57,7 +57,7 @@ macro_rules! send_and_then {
 
 macro_rules! send_then_redirect {
     ($db:expr, $message:expr) => {
-        send_and_then!($db, $message, |res| match res.into() {
+        send_and_then!($db, $message, |res| match res {
             Ok(_) => Ok(HttpResponse::Found()
                 .header(http::header::LOCATION, "/")
                 .finish()),
