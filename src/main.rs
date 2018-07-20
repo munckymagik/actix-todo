@@ -45,13 +45,11 @@ struct UpdateForm {
     _method: String,
 }
 
-macro_rules! send {
-    ($db:expr, $message:expr) => ($db.send($message).from_err());
-}
-
 macro_rules! send_and_then {
     ($db:expr, $message:expr, $block:expr) => {
-        send!($db, $message)
+        $db
+            .send($message)
+            .from_err()
             .and_then($block)
             .responder()
     };
