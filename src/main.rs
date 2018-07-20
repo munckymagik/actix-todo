@@ -45,6 +45,20 @@ struct UpdateForm {
     _method: String,
 }
 
+macro_rules! handle_request {
+    ($message:expr, $db:expr) => {
+        $db.send($message)
+            .from_err()
+            .and_then(|res| match res.into() {
+                Ok(_) => Ok(HttpResponse::Found()
+                    .header(http::header::LOCATION, "/")
+                    .finish()),
+                Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            })
+            .responder()
+    };
+}
+
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
     state
         .db
@@ -68,47 +82,20 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
 }
 
 fn create((state, params): (State<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
-    state
-        .db
-        .send(db::CreateTask {
-            description: params.description.clone(),
-        })
-        .from_err()
-        .and_then(|res| match res {
-            Ok(_) => Ok(HttpResponse::Found()
-                .header(http::header::LOCATION, "/")
-                .finish()),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
+    handle_request!(
+        db::CreateTask {
+            description: params.description.clone()
+        },
+        state.db
+    )
 }
 
 fn update_or_delete(
     (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
-        "put" => state
-            .db
-            .send(db::ToggleTask { id: params.id })
-            .from_err()
-            .and_then(|res| match res {
-                Ok(_) => Ok(HttpResponse::Found()
-                    .header(http::header::LOCATION, "/")
-                    .finish()),
-                Err(_) => Ok(HttpResponse::InternalServerError().into()),
-            })
-            .responder(),
-        "delete" => state
-            .db
-            .send(db::DeleteTask { id: params.id })
-            .from_err()
-            .and_then(|res| match res {
-                Ok(_) => Ok(HttpResponse::Found()
-                    .header(http::header::LOCATION, "/")
-                    .finish()),
-                Err(_) => Ok(HttpResponse::InternalServerError().into()),
-            })
-            .responder(),
+        "put" => handle_request!(db::ToggleTask { id: params.id }, state.db),
+        "delete" => handle_request!(db::DeleteTask { id: params.id }, state.db),
         _ => future::ok(HttpResponse::BadRequest().into()).responder(),
     }
 }
