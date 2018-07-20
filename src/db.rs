@@ -56,6 +56,14 @@ impl Message for ToggleTask {
     type Result = Result<(), Error>;
 }
 
+pub struct DeleteTask {
+    pub id: i32,
+}
+
+impl Message for DeleteTask {
+    type Result = Result<(), Error>;
+}
+
 impl Actor for Conn {
     type Context = SyncContext<Self>;
 }
@@ -86,6 +94,16 @@ impl Handler<ToggleTask> for Conn {
 
     fn handle(&mut self, task: ToggleTask, _: &mut Self::Context) -> Self::Result {
         Task::toggle_with_id(task.id, self)
+            .map(|_| ())
+            .map_err(|_| error::ErrorInternalServerError("Error inserting task"))
+    }
+}
+
+impl Handler<DeleteTask> for Conn {
+    type Result = Result<(), Error>;
+
+    fn handle(&mut self, task: DeleteTask, _: &mut Self::Context) -> Self::Result {
+        Task::delete_with_id(task.id, self)
             .map(|_| ())
             .map_err(|_| error::ErrorInternalServerError("Error inserting task"))
     }

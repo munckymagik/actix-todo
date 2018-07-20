@@ -18,7 +18,7 @@ use actix_web::{
     dev::ResourceHandler, fs, http, server, App, AsyncResponder, Form, FutureResponse, HttpRequest,
     HttpResponse, Path, State,
 };
-use futures::Future;
+use futures::{future, Future};
 use tera::{Context, Tera};
 
 mod db;
@@ -31,13 +31,18 @@ struct AppState {
 }
 
 #[derive(Deserialize)]
-struct CreateParams {
+struct CreateForm {
     description: String,
 }
 
 #[derive(Deserialize)]
-struct ToggleParams {
+struct UpdateParams {
     id: i32,
+}
+
+#[derive(Deserialize)]
+struct UpdateForm {
+    _method: String,
 }
 
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
@@ -62,7 +67,7 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
         .responder()
 }
 
-fn create((state, params): (State<AppState>, Form<CreateParams>)) -> FutureResponse<HttpResponse> {
+fn create((state, params): (State<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
     state
         .db
         .send(db::CreateTask {
@@ -78,18 +83,34 @@ fn create((state, params): (State<AppState>, Form<CreateParams>)) -> FutureRespo
         .responder()
 }
 
-fn toggle((state, params): (State<AppState>, Path<ToggleParams>)) -> FutureResponse<HttpResponse> {
-    state
-        .db
-        .send(db::ToggleTask { id: params.id })
-        .from_err()
-        .and_then(|res| match res {
-            Ok(_) => Ok(HttpResponse::Found()
-                .header(http::header::LOCATION, "/")
-                .finish()),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
+fn update_or_delete(
+    (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
+) -> FutureResponse<HttpResponse> {
+    match form._method.as_ref() {
+        "put" => state
+            .db
+            .send(db::ToggleTask { id: params.id })
+            .from_err()
+            .and_then(|res| match res {
+                Ok(_) => Ok(HttpResponse::Found()
+                    .header(http::header::LOCATION, "/")
+                    .finish()),
+                Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            })
+            .responder(),
+        "delete" => state
+            .db
+            .send(db::DeleteTask { id: params.id })
+            .from_err()
+            .and_then(|res| match res {
+                Ok(_) => Ok(HttpResponse::Found()
+                    .header(http::header::LOCATION, "/")
+                    .finish()),
+                Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            })
+            .responder(),
+        _ => future::ok(HttpResponse::BadRequest().into()).responder(),
+    }
 }
 
 fn not_found(_: HttpRequest<AppState>) -> HttpResponse {
@@ -116,10 +137,10 @@ fn main() {
             db: addr.clone(),
         }).middleware(Logger::default())
             .route("/", http::Method::GET, index)
-            .route("/todo", http::Method::POST, create)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
-                r.post().with(toggle)
+                r.post().with(update_or_delete)
             })
+            .route("/todo", http::Method::POST, create)
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
     };

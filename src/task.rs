@@ -34,8 +34,8 @@ impl Task {
             .execute(conn)
     }
 
-    pub fn delete_with_id(id: i32, conn: &PgConnection) -> bool {
-        diesel::delete(all_tasks.find(id)).execute(conn).is_ok()
+    pub fn delete_with_id(id: i32, conn: &PgConnection) -> QueryResult<usize> {
+        diesel::delete(all_tasks.find(id)).execute(conn)
     }
 }
 
