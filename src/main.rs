@@ -14,6 +14,7 @@ extern crate tera;
 
 use actix::prelude::{Addr, Syn, SyncArbiter};
 use actix_web::middleware::Logger;
+use actix_web::middleware::session::{RequestSession, SessionStorage, CookieSessionBackend};
 use actix_web::{
     dev::ResourceHandler, fs, http, server, App, AsyncResponder, Form, FutureResponse, HttpRequest,
     HttpResponse, Path, State,
@@ -66,16 +67,21 @@ macro_rules! send_then_redirect {
     };
 }
 
-fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
+fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
     send_and_then!(
-        state.db,
+        req.state().db,
         db::AllTasks,
         move |res| match res {
             Ok(tasks) => {
                 let mut context = Context::new();
                 context.add("tasks", &tasks);
 
-                let rendered = state
+                if let Some(message) = req.session().get::<String>("flash")? {
+                    context.add("msg", &("error", message));
+                    req.session().remove("flash");
+                }
+
+                let rendered = req.state()
                     .template
                     .render("index.html.tera", &context)
                     .expect("wow template");
@@ -86,13 +92,21 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
         })
 }
 
-fn create((state, params): (State<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
-    send_then_redirect!(
-        state.db,
-        db::CreateTask {
-            description: params.description.clone()
-        }
-    )
+fn create((req, params): (HttpRequest<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
+    if params.description.is_empty() {
+        req.session().set("flash", "Description cannot be empty").expect("failed to set cookie");
+        future::ok(HttpResponse::Found()
+                .header(http::header::LOCATION, "/")
+                .finish())
+            .responder()
+    } else {
+        send_then_redirect!(
+            req.state().db,
+            db::CreateTask {
+                description: params.description.clone()
+            }
+        )
+    }
 }
 
 fn update_or_delete(
@@ -128,6 +142,9 @@ fn main() {
             template: tera,
             db: addr.clone(),
         }).middleware(Logger::default())
+            .middleware(SessionStorage::new(
+                CookieSessionBackend::signed(&[0; 32]).secure(false)
+            ))
             .route("/", http::Method::GET, index)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
                 r.post().with(update_or_delete)
