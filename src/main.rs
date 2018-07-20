@@ -45,26 +45,34 @@ struct UpdateForm {
     _method: String,
 }
 
-macro_rules! handle_request {
-    ($message:expr, $db:expr) => {
-        $db.send($message)
-            .from_err()
-            .and_then(|res| match res.into() {
-                Ok(_) => Ok(HttpResponse::Found()
-                    .header(http::header::LOCATION, "/")
-                    .finish()),
-                Err(_) => Ok(HttpResponse::InternalServerError().into()),
-            })
+macro_rules! send {
+    ($db:expr, $message:expr) => ($db.send($message).from_err());
+}
+
+macro_rules! send_and_then {
+    ($db:expr, $message:expr, $block:expr) => {
+        send!($db, $message)
+            .and_then($block)
             .responder()
     };
 }
 
+macro_rules! send_then_redirect {
+    ($db:expr, $message:expr) => {
+        send_and_then!($db, $message, |res| match res.into() {
+            Ok(_) => Ok(HttpResponse::Found()
+                .header(http::header::LOCATION, "/")
+                .finish()),
+            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        })
+    };
+}
+
 fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
-    state
-        .db
-        .send(db::AllTasks)
-        .from_err()
-        .and_then(move |res| match res {
+    send_and_then!(
+        state.db,
+        db::AllTasks,
+        move |res| match res {
             Ok(tasks) => {
                 let mut context = Context::new();
                 context.add("tasks", &tasks);
@@ -78,15 +86,14 @@ fn index(state: State<AppState>) -> FutureResponse<HttpResponse> {
             }
             Err(_) => Ok(HttpResponse::InternalServerError().into()),
         })
-        .responder()
 }
 
 fn create((state, params): (State<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
-    handle_request!(
+    send_then_redirect!(
+        state.db,
         db::CreateTask {
             description: params.description.clone()
-        },
-        state.db
+        }
     )
 }
 
@@ -94,8 +101,8 @@ fn update_or_delete(
     (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
-        "put" => handle_request!(db::ToggleTask { id: params.id }, state.db),
-        "delete" => handle_request!(db::DeleteTask { id: params.id }, state.db),
+        "put" => send_then_redirect!(state.db, db::ToggleTask { id: params.id }),
+        "delete" => send_then_redirect!(state.db, db::DeleteTask { id: params.id }),
         _ => future::ok(HttpResponse::BadRequest().into()).responder(),
     }
 }
