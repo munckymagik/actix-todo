@@ -13,8 +13,8 @@ extern crate serde_derive;
 extern crate tera;
 
 use actix::prelude::{Addr, Syn, SyncArbiter};
+use actix_web::middleware::session::{CookieSessionBackend, RequestSession, SessionStorage};
 use actix_web::middleware::Logger;
-use actix_web::middleware::session::{RequestSession, SessionStorage, CookieSessionBackend};
 use actix_web::{
     dev::ResourceHandler, fs, http, server, App, AsyncResponder, Form, FutureResponse, HttpRequest,
     HttpResponse, Path, State,
@@ -48,11 +48,7 @@ struct UpdateForm {
 
 macro_rules! send_and_then {
     ($db:expr, $message:expr, $block:expr) => {
-        $db
-            .send($message)
-            .from_err()
-            .and_then($block)
-            .responder()
+        $db.send($message).from_err().and_then($block).responder()
     };
 }
 
@@ -68,37 +64,40 @@ macro_rules! send_then_redirect {
 }
 
 fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
-    send_and_then!(
-        req.state().db,
-        db::AllTasks,
-        move |res| match res {
-            Ok(tasks) => {
-                let mut context = Context::new();
-                context.add("tasks", &tasks);
+    send_and_then!(req.state().db, db::AllTasks, move |res| match res {
+        Ok(tasks) => {
+            let mut context = Context::new();
+            context.add("tasks", &tasks);
 
-                if let Some(message) = req.session().get::<String>("flash")? {
-                    context.add("msg", &("error", message));
-                    req.session().remove("flash");
-                }
-
-                let rendered = req.state()
-                    .template
-                    .render("index.html.tera", &context)
-                    .expect("wow template");
-
-                Ok(HttpResponse::Ok().body(rendered))
+            if let Some(message) = req.session().get::<String>("flash")? {
+                context.add("msg", &("error", message));
+                req.session().remove("flash");
             }
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
+
+            let rendered = req.state()
+                .template
+                .render("index.html.tera", &context)
+                .expect("wow template");
+
+            Ok(HttpResponse::Ok().body(rendered))
+        }
+        Err(_) => Ok(HttpResponse::InternalServerError().into()),
+    })
 }
 
-fn create((req, params): (HttpRequest<AppState>, Form<CreateForm>)) -> FutureResponse<HttpResponse> {
+fn create(
+    (req, params): (HttpRequest<AppState>, Form<CreateForm>),
+) -> FutureResponse<HttpResponse> {
     if params.description.is_empty() {
-        req.session().set("flash", "Description cannot be empty").expect("failed to set cookie");
-        future::ok(HttpResponse::Found()
+        req.session()
+            .set("flash", "Description cannot be empty")
+            .expect("failed to set cookie");
+
+        future::ok(
+            HttpResponse::Found()
                 .header(http::header::LOCATION, "/")
-                .finish())
-            .responder()
+                .finish(),
+        ).responder()
     } else {
         send_then_redirect!(
             req.state().db,
@@ -143,7 +142,7 @@ fn main() {
             db: addr.clone(),
         }).middleware(Logger::default())
             .middleware(SessionStorage::new(
-                CookieSessionBackend::signed(&[0; 32]).secure(false)
+                CookieSessionBackend::signed(&[0; 32]).secure(false),
             ))
             .route("/", http::Method::GET, index)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
