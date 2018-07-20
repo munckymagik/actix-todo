@@ -55,12 +55,28 @@ macro_rules! send_and_then {
 macro_rules! send_then_redirect {
     ($db:expr, $message:expr) => {
         send_and_then!($db, $message, |res| match res {
-            Ok(_) => Ok(HttpResponse::Found()
-                .header(http::header::LOCATION, "/")
-                .finish()),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            Ok(_) => Ok(redirect_to("/")),
+            Err(_) => Ok(internal_server_error()),
         })
     };
+}
+
+fn redirect_to(location: &str) -> HttpResponse {
+    HttpResponse::Found()
+        .header(http::header::LOCATION, location)
+        .finish()
+}
+
+fn bad_request() -> HttpResponse {
+    HttpResponse::BadRequest().body("400 Bad Request")
+}
+
+fn not_found() -> HttpResponse {
+    HttpResponse::NotFound().body("404 Not Found")
+}
+
+fn internal_server_error() -> HttpResponse {
+    HttpResponse::InternalServerError().body("500 Internal Server Error")
 }
 
 fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
@@ -81,7 +97,7 @@ fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
 
             Ok(HttpResponse::Ok().body(rendered))
         }
-        Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        Err(_) => Ok(internal_server_error()),
     })
 }
 
@@ -93,11 +109,7 @@ fn create(
             .set("flash", "Description cannot be empty")
             .expect("failed to set cookie");
 
-        future::ok(
-            HttpResponse::Found()
-                .header(http::header::LOCATION, "/")
-                .finish(),
-        ).responder()
+        future::ok(redirect_to("/")).responder()
     } else {
         send_then_redirect!(
             req.state().db,
@@ -114,12 +126,8 @@ fn update_or_delete(
     match form._method.as_ref() {
         "put" => send_then_redirect!(state.db, db::ToggleTask { id: params.id }),
         "delete" => send_then_redirect!(state.db, db::DeleteTask { id: params.id }),
-        _ => future::ok(HttpResponse::BadRequest().into()).responder(),
+        _ => future::ok(bad_request()).responder(),
     }
-}
-
-fn not_found(_: HttpRequest<AppState>) -> HttpResponse {
-    HttpResponse::NotFound().body("Not found")
 }
 
 fn main() {
@@ -150,7 +158,7 @@ fn main() {
             })
             .route("/todo", http::Method::POST, create)
             .handler("/static", fs::StaticFiles::new("static/"))
-            .default_resource(|r: &mut ResourceHandler<_>| r.f(not_found))
+            .default_resource(|r: &mut ResourceHandler<_>| r.f(|_| not_found()))
     };
 
     debug!("Starting server");
