@@ -109,7 +109,7 @@ fn internal_server_error() -> HttpResponse {
     HttpResponse::InternalServerError().body("500 Internal Server Error")
 }
 
-fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
+fn handle_index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
     send_and_then!(req.state().db, db::AllTasks, move |res| match res {
         Ok(tasks) => {
             let mut context = Context::new();
@@ -131,7 +131,7 @@ fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
     })
 }
 
-fn create(
+fn handle_create(
     (req, params): (HttpRequest<AppState>, Form<CreateForm>),
 ) -> FutureResponse<HttpResponse> {
     if params.description.is_empty() {
@@ -154,7 +154,7 @@ fn create(
     }
 }
 
-fn update_or_delete(
+fn handle_update_or_delete(
     (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
@@ -186,11 +186,11 @@ fn main() {
             .middleware(SessionStorage::new(
                 CookieSessionBackend::signed(&[0; 32]).secure(false),
             ))
-            .route("/", http::Method::GET, index)
+            .route("/", http::Method::GET, handle_index)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
-                r.post().with(update_or_delete)
+                r.post().with(handle_update_or_delete)
             })
-            .route("/todo", http::Method::POST, create)
+            .route("/todo", http::Method::POST, handle_create)
             .handler("/static", fs::StaticFiles::new("static/"))
             .default_resource(|r: &mut ResourceHandler<_>| r.f(|_| not_found()))
     };
