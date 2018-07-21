@@ -133,12 +133,18 @@ fn create(
 
         future::ok(redirect_to("/")).responder()
     } else {
-        send_then_redirect!(
+        send_and_then!(
             req.state().db,
-            db::CreateTask {
-                description: params.description.clone()
-            }
-        )
+            db::CreateTask { description: params.description.clone() },
+            move |res| match res {
+                Ok(_) => {
+                    req.session()
+                        .set("flash", Flash::success("Task successfully added"))
+                        .expect("failed to set cookie");
+                    Ok(redirect_to("/"))
+                },
+                Err(_) => Ok(internal_server_error()),
+            })
     }
 }
 
