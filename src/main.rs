@@ -41,14 +41,14 @@ impl Flash {
     fn success(message: &str) -> Self {
         Self {
             kind: "success".to_owned(),
-            message: message.to_owned()
+            message: message.to_owned(),
         }
     }
 
     fn error(message: &str) -> Self {
         Self {
             kind: "error".to_owned(),
-            message: message.to_owned()
+            message: message.to_owned(),
         }
     }
 }
@@ -69,11 +69,11 @@ struct UpdateForm {
 }
 
 macro_rules! flash {
-    ($req:expr, $flash:expr) => (
+    ($req:expr, $flash:expr) => {
         $req.session()
             .set("flash", $flash)
             .expect("failed to set cookie")
-    )
+    };
 }
 
 macro_rules! send_and_then {
@@ -140,14 +140,17 @@ fn create(
     } else {
         send_and_then!(
             req.state().db,
-            db::CreateTask { description: params.description.clone() },
+            db::CreateTask {
+                description: params.description.clone()
+            },
             move |res| match res {
                 Ok(_) => {
                     flash!(req, Flash::success("Task successfully added"));
                     Ok(redirect_to("/"))
-                },
+                }
                 Err(_) => Ok(internal_server_error()),
-            })
+            }
+        )
     }
 }
 
