@@ -60,15 +60,6 @@ macro_rules! send_and_then {
     };
 }
 
-macro_rules! send_then_redirect {
-    ($db:expr, $message:expr) => {
-        send_and_then!($db, $message, |res| match res {
-            Ok(_) => Ok(redirect_to("/")),
-            Err(_) => Ok(internal_server_error()),
-        })
-    };
-}
-
 fn redirect_to(location: &str) -> HttpResponse {
     HttpResponse::Found()
         .header(http::header::LOCATION, location)
@@ -136,8 +127,18 @@ pub fn handle_update_or_delete(
     (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
-        "put" => send_then_redirect!(state.db, db::ToggleTask { id: params.id }),
-        "delete" => send_then_redirect!(state.db, db::DeleteTask { id: params.id }),
+        "put" => {
+            send_and_then!(state.db, db::ToggleTask { id: params.id }, |res| match res {
+                Ok(_) => Ok(redirect_to("/")),
+                Err(_) => Ok(internal_server_error()),
+            })
+        },
+        "delete" => {
+            send_and_then!(state.db, db::DeleteTask { id: params.id }, |res| match res {
+                Ok(_) => Ok(redirect_to("/")),
+                Err(_) => Ok(internal_server_error()),
+            })
+        },
         _ => future::ok(bad_request()).responder(),
     }
 }
