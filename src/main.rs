@@ -68,6 +68,14 @@ struct UpdateForm {
     _method: String,
 }
 
+macro_rules! flash {
+    ($req:expr, $flash:expr) => (
+        $req.session()
+            .set("flash", $flash)
+            .expect("failed to set cookie")
+    )
+}
+
 macro_rules! send_and_then {
     ($db:expr, $message:expr, $block:expr) => {
         $db.send($message).from_err().and_then($block).responder()
@@ -127,10 +135,7 @@ fn create(
     (req, params): (HttpRequest<AppState>, Form<CreateForm>),
 ) -> FutureResponse<HttpResponse> {
     if params.description.is_empty() {
-        req.session()
-            .set("flash", Flash::error("Description cannot be empty"))
-            .expect("failed to set cookie");
-
+        flash!(req, Flash::error("Description cannot be empty"));
         future::ok(redirect_to("/")).responder()
     } else {
         send_and_then!(
@@ -138,9 +143,7 @@ fn create(
             db::CreateTask { description: params.description.clone() },
             move |res| match res {
                 Ok(_) => {
-                    req.session()
-                        .set("flash", Flash::success("Task successfully added"))
-                        .expect("failed to set cookie");
+                    flash!(req, Flash::success("Task successfully added"));
                     Ok(redirect_to("/"))
                 },
                 Err(_) => Ok(internal_server_error()),
