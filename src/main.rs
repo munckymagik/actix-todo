@@ -31,6 +31,28 @@ struct AppState {
     db: Addr<Syn, db::Conn>,
 }
 
+#[derive(Deserialize, Serialize)]
+struct Flash {
+    kind: String,
+    message: String,
+}
+
+impl Flash {
+    fn success(message: &str) -> Self {
+        Self {
+            kind: "success".to_owned(),
+            message: message.to_owned()
+        }
+    }
+
+    fn error(message: &str) -> Self {
+        Self {
+            kind: "error".to_owned(),
+            message: message.to_owned()
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct CreateForm {
     description: String,
@@ -85,8 +107,8 @@ fn index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
             let mut context = Context::new();
             context.add("tasks", &tasks);
 
-            if let Some(message) = req.session().get::<String>("flash")? {
-                context.add("msg", &("error", message));
+            if let Some(flash) = req.session().get::<Flash>("flash")? {
+                context.add("msg", &(flash.kind, flash.message));
                 req.session().remove("flash");
             }
 
@@ -106,7 +128,7 @@ fn create(
 ) -> FutureResponse<HttpResponse> {
     if params.description.is_empty() {
         req.session()
-            .set("flash", "Description cannot be empty")
+            .set("flash", Flash::error("Description cannot be empty"))
             .expect("failed to set cookie");
 
         future::ok(redirect_to("/")).responder()
