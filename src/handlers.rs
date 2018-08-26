@@ -1,7 +1,7 @@
 use actix::prelude::{Handler, Message};
 use actix_web::{error, Error};
 
-use db::Conn;
+use db::DbExecutor;
 use model::{NewTask, Task};
 
 pub struct CreateTask {
@@ -34,7 +34,7 @@ impl Message for DeleteTask {
     type Result = Result<(), Error>;
 }
 
-impl Handler<AllTasks> for Conn {
+impl Handler<AllTasks> for DbExecutor {
     type Result = Result<Vec<Task>, Error>;
 
     fn handle(&mut self, _: AllTasks, _: &mut Self::Context) -> Self::Result {
@@ -42,7 +42,7 @@ impl Handler<AllTasks> for Conn {
     }
 }
 
-impl Handler<CreateTask> for Conn {
+impl Handler<CreateTask> for DbExecutor {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, todo: CreateTask, _: &mut Self::Context) -> Self::Result {
@@ -55,7 +55,7 @@ impl Handler<CreateTask> for Conn {
     }
 }
 
-impl Handler<ToggleTask> for Conn {
+impl Handler<ToggleTask> for DbExecutor {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, task: ToggleTask, _: &mut Self::Context) -> Self::Result {
@@ -65,7 +65,7 @@ impl Handler<ToggleTask> for Conn {
     }
 }
 
-impl Handler<DeleteTask> for Conn {
+impl Handler<DeleteTask> for DbExecutor {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, task: DeleteTask, _: &mut Self::Context) -> Self::Result {

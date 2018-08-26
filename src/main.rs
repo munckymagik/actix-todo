@@ -29,7 +29,7 @@ static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
 
 pub struct AppState {
     template: Tera,
-    db: Addr<db::Conn>,
+    db: Addr<db::DbExecutor>,
 }
 
 fn main() {
@@ -42,7 +42,7 @@ fn main() {
     let system = actix::System::new("todo-app");
 
     let pool = db::init_pool();
-    let addr = SyncArbiter::start(3, move || db::Conn(pool.get().unwrap()));
+    let addr = SyncArbiter::start(3, move || db::DbExecutor(pool.get().unwrap()));
 
     let app = move || {
         debug!("Compiling templates");

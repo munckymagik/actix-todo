@@ -15,9 +15,9 @@ pub fn init_pool() -> PgPool {
         .expect("Failed to create pool")
 }
 
-pub struct Conn(pub PooledConnection<ConnectionManager<PgConnection>>);
+pub struct DbExecutor(pub PooledConnection<ConnectionManager<PgConnection>>);
 
-impl Deref for Conn {
+impl Deref for DbExecutor {
     type Target = PgConnection;
 
     #[inline(always)]
@@ -26,6 +26,6 @@ impl Deref for Conn {
     }
 }
 
-impl Actor for Conn {
+impl Actor for DbExecutor {
     type Context = SyncContext<Self>;
 }
