@@ -20,8 +20,8 @@ use actix_web::{
 };
 use tera::Tera;
 
+mod api;
 mod db;
-mod handlers;
 mod schema;
 mod task;
 
@@ -52,13 +52,13 @@ fn main() {
             .middleware(SessionStorage::new(
                 CookieSessionBackend::signed(&[0; 32]).secure(false),
             ))
-            .route("/", http::Method::GET, handlers::handle_index)
+            .route("/", http::Method::GET, api::handle_index)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
-                r.post().with(handlers::handle_update_or_delete)
+                r.post().with(api::handle_update_or_delete)
             })
-            .route("/todo", http::Method::POST, handlers::handle_create)
+            .route("/todo", http::Method::POST, api::handle_create)
             .handler("/static", fs::StaticFiles::new("static/"))
-            .default_resource(|r: &mut ResourceHandler<_>| r.f(|_| handlers::not_found()))
+            .default_resource(|r: &mut ResourceHandler<_>| r.f(|_| api::not_found()))
     };
 
     debug!("Starting server");
