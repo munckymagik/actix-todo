@@ -1,6 +1,6 @@
 use actix_web::{
     http, AsyncResponder, Form, FutureResponse, HttpRequest,
-    HttpResponse, Path, State,
+    HttpResponse, Path,
 };
 use actix_web::middleware::session::RequestSession;
 use futures::{future, Future};
@@ -124,18 +124,21 @@ pub fn handle_create(
 }
 
 pub fn handle_update_or_delete(
-    (state, params, form): (State<AppState>, Path<UpdateParams>, Form<UpdateForm>),
+    (req, params, form): (HttpRequest<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
         "put" => {
-            send_and_then!(state.db, ToggleTask { id: params.id }, |res| match res {
+            send_and_then!(req.state().db, ToggleTask { id: params.id }, move |res| match res {
                 Ok(_) => Ok(redirect_to("/")),
                 Err(_) => Ok(internal_server_error()),
             })
         },
         "delete" => {
-            send_and_then!(state.db, DeleteTask { id: params.id }, |res| match res {
-                Ok(_) => Ok(redirect_to("/")),
+            send_and_then!(req.state().db, DeleteTask { id: params.id }, move |res| match res {
+                Ok(_) => {
+                    flash!(req, Flash::success("Task was deleted."));
+                    Ok(redirect_to("/"))
+                },
                 Err(_) => Ok(internal_server_error()),
             })
         },
