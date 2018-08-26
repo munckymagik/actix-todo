@@ -18,6 +18,7 @@ use actix_web::middleware::Logger;
 use actix_web::{
     dev::ResourceHandler, fs, http, server, App
 };
+use dotenv::dotenv;
 use tera::Tera;
 
 mod api;
@@ -32,6 +33,8 @@ pub struct AppState {
 }
 
 fn main() {
+    dotenv().ok();
+
     std::env::set_var("RUST_LOG", "actix_todo=debug,actix_web=info");
     env_logger::init();
 
