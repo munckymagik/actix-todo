@@ -1,13 +1,10 @@
-use actix_web::{
-    http, AsyncResponder, Form, FutureResponse, HttpRequest,
-    HttpResponse, Path,
-};
 use actix_web::middleware::session::RequestSession;
+use actix_web::{http, AsyncResponder, Form, FutureResponse, HttpRequest, HttpResponse, Path};
 use futures::{future, Future};
 use tera::Context;
 
-use AppState;
 use handlers::{AllTasks, CreateTask, DeleteTask, ToggleTask};
+use AppState;
 
 #[derive(Deserialize, Serialize)]
 struct Flash {
@@ -127,21 +124,23 @@ pub fn handle_update_or_delete(
     (req, params, form): (HttpRequest<AppState>, Path<UpdateParams>, Form<UpdateForm>),
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
-        "put" => {
-            send_and_then!(req.state().db, ToggleTask { id: params.id }, move |res| match res {
+        "put" => send_and_then!(
+            req.state().db,
+            ToggleTask { id: params.id },
+            move |res| match res {
                 Ok(_) => Ok(redirect_to("/")),
                 Err(_) => Ok(internal_server_error()),
-            })
-        },
-        "delete" => {
-            send_and_then!(req.state().db, DeleteTask { id: params.id }, move |res| match res {
+            }
+        ),
+        "delete" => send_and_then!(req.state().db, DeleteTask { id: params.id }, move |res| {
+            match res {
                 Ok(_) => {
                     flash!(req, Flash::success("Task was deleted."));
                     Ok(redirect_to("/"))
-                },
+                }
                 Err(_) => Ok(internal_server_error()),
-            })
-        },
+            }
+        }),
         _ => future::ok(bad_request()).responder(),
     }
 }

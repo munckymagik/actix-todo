@@ -15,17 +15,15 @@ extern crate tera;
 use actix::prelude::{Addr, SyncArbiter};
 use actix_web::middleware::session::{CookieSessionBackend, SessionStorage};
 use actix_web::middleware::Logger;
-use actix_web::{
-    dev::Resource, fs, http, server, App
-};
+use actix_web::{dev::Resource, fs, http, server, App};
 use dotenv::dotenv;
 use tera::Tera;
 
 mod api;
 mod db;
 mod handlers;
-mod schema;
 mod model;
+mod schema;
 
 static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
 
@@ -63,7 +61,10 @@ fn main() {
                 r.post().with(api::handle_update_or_delete)
             })
             .route("/todo", http::Method::POST, api::handle_create)
-            .handler("/static", fs::StaticFiles::new("static/").expect("new static files failed "))
+            .handler(
+                "/static",
+                fs::StaticFiles::new("static/").expect("new static files failed"),
+            )
             .default_resource(|r: &mut Resource<_>| r.f(|_| api::not_found()))
     };
 
