@@ -92,7 +92,7 @@ pub fn handle_index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> 
             let rendered = req.state()
                 .template
                 .render("index.html.tera", &context)
-                .expect("wow template");
+                .expect("failed to render template");
 
             Ok(HttpResponse::Ok().body(rendered))
         }
