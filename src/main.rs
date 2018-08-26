@@ -27,6 +27,8 @@ mod handlers;
 mod schema;
 mod model;
 
+static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
+
 pub struct AppState {
     template: Tera,
     db: Addr<Syn, db::Conn>,
@@ -54,7 +56,7 @@ fn main() {
             db: addr.clone(),
         }).middleware(Logger::default())
             .middleware(SessionStorage::new(
-                CookieSessionBackend::signed(&[0; 32]).secure(false),
+                CookieSessionBackend::signed(SESSION_SIGNING_KEY).secure(false),
             ))
             .route("/", http::Method::GET, api::handle_index)
             .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
