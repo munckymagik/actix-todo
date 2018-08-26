@@ -12,11 +12,11 @@ extern crate serde_derive;
 #[macro_use]
 extern crate tera;
 
-use actix::prelude::{Addr, Syn, SyncArbiter};
+use actix::prelude::{Addr, SyncArbiter};
 use actix_web::middleware::session::{CookieSessionBackend, SessionStorage};
 use actix_web::middleware::Logger;
 use actix_web::{
-    dev::ResourceHandler, fs, http, server, App
+    dev::Resource, fs, http, server, App
 };
 use dotenv::dotenv;
 use tera::Tera;
@@ -31,7 +31,7 @@ static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
 
 pub struct AppState {
     template: Tera,
-    db: Addr<Syn, db::Conn>,
+    db: Addr<db::Conn>,
 }
 
 fn main() {
@@ -59,12 +59,12 @@ fn main() {
                 CookieSessionBackend::signed(SESSION_SIGNING_KEY).secure(false),
             ))
             .route("/", http::Method::GET, api::handle_index)
-            .resource("/todo/{id}", |r: &mut ResourceHandler<_>| {
+            .resource("/todo/{id}", |r: &mut Resource<_>| {
                 r.post().with(api::handle_update_or_delete)
             })
             .route("/todo", http::Method::POST, api::handle_create)
-            .handler("/static", fs::StaticFiles::new("static/"))
-            .default_resource(|r: &mut ResourceHandler<_>| r.f(|_| api::not_found()))
+            .handler("/static", fs::StaticFiles::new("static/").expect("new static files failed "))
+            .default_resource(|r: &mut Resource<_>| r.f(|_| api::not_found()))
     };
 
     debug!("Starting server");
