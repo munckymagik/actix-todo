@@ -9,7 +9,7 @@ use dotenv::dotenv;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 
-use task::{NewTask, Task};
+use model::{NewTask, Task};
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 

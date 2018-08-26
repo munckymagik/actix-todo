@@ -23,7 +23,7 @@ use tera::Tera;
 mod api;
 mod db;
 mod schema;
-mod task;
+mod model;
 
 pub struct AppState {
     template: Tera,
