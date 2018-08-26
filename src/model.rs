@@ -6,6 +6,12 @@ use schema::{
     tasks, tasks::dsl::{completed as task_completed, tasks as all_tasks},
 };
 
+#[derive(Debug, Insertable)]
+#[table_name = "tasks"]
+pub struct NewTask {
+    pub description: String,
+}
+
 #[derive(Debug, Queryable, Serialize)]
 pub struct Task {
     pub id: i32,
@@ -37,10 +43,4 @@ impl Task {
     pub fn delete_with_id(id: i32, conn: &PgConnection) -> QueryResult<usize> {
         diesel::delete(all_tasks.find(id)).execute(conn)
     }
-}
-
-#[derive(Debug, Insertable)]
-#[table_name = "tasks"]
-pub struct NewTask {
-    pub description: String,
 }
