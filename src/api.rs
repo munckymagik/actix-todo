@@ -7,7 +7,7 @@ use futures::{future, Future};
 use tera::Context;
 
 use AppState;
-use db;
+use handlers::{AllTasks, CreateTask, DeleteTask, ToggleTask};
 
 #[derive(Deserialize, Serialize)]
 struct Flash {
@@ -79,7 +79,7 @@ fn internal_server_error() -> HttpResponse {
 }
 
 pub fn handle_index(req: HttpRequest<AppState>) -> FutureResponse<HttpResponse> {
-    send_and_then!(req.state().db, db::AllTasks, move |res| match res {
+    send_and_then!(req.state().db, AllTasks, move |res| match res {
         Ok(tasks) => {
             let mut context = Context::new();
             context.add("tasks", &tasks);
@@ -109,7 +109,7 @@ pub fn handle_create(
     } else {
         send_and_then!(
             req.state().db,
-            db::CreateTask {
+            CreateTask {
                 description: params.description.clone()
             },
             move |res| match res {
@@ -128,13 +128,13 @@ pub fn handle_update_or_delete(
 ) -> FutureResponse<HttpResponse> {
     match form._method.as_ref() {
         "put" => {
-            send_and_then!(state.db, db::ToggleTask { id: params.id }, |res| match res {
+            send_and_then!(state.db, ToggleTask { id: params.id }, |res| match res {
                 Ok(_) => Ok(redirect_to("/")),
                 Err(_) => Ok(internal_server_error()),
             })
         },
         "delete" => {
-            send_and_then!(state.db, db::DeleteTask { id: params.id }, |res| match res {
+            send_and_then!(state.db, DeleteTask { id: params.id }, |res| match res {
                 Ok(_) => Ok(redirect_to("/")),
                 Err(_) => Ok(internal_server_error()),
             })

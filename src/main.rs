@@ -22,6 +22,7 @@ use tera::Tera;
 
 mod api;
 mod db;
+mod handlers;
 mod schema;
 mod model;
 
