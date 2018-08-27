@@ -26,6 +26,7 @@ mod model;
 mod schema;
 
 static SESSION_SIGNING_KEY: &[u8] = &[0; 32];
+const NUM_DB_THREADS: usize = 3;
 
 pub struct AppState {
     template: Tera,
@@ -42,7 +43,7 @@ fn main() {
     let system = actix::System::new("todo-app");
 
     let pool = db::init_pool();
-    let addr = SyncArbiter::start(3, move || db::DbExecutor(pool.get().unwrap()));
+    let addr = SyncArbiter::start(NUM_DB_THREADS, move || db::DbExecutor(pool.get().unwrap()));
 
     let app = move || {
         debug!("Compiling templates");
