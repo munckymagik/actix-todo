@@ -1,3 +1,7 @@
+# UPDATE
+
+Much improved version contributed to the [actix/examples](https://github.com/actix/examples/tree/master/actix_todo) project.
+
 # actix-todo
 
 A port of the [Rocket Todo example](https://github.com/SergioBenitez/Rocket/tree/master/examples/todo) into [actix-web](https://actix.rs/) for the sake of comparison. Except this uses PostgreSQL instead of SQLite.
